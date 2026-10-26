@@ -6,7 +6,9 @@ Regole (tutte modificabili qui):
 - più date di fila dello stesso artista al Forum: +10 per serata in più (max +20)
   -> "Pausini tre sere di fila" = base 45 + 20 + eventuale sold out
 - evento nella tua lista 'big': +15; con un livello ("X Factor=alto") la giornata non scende
-  sotto quel livello (minimo: medio 30, alto 55, estremo 75)
+  sotto quel livello (minimo: medio 30, alto 55, estremo 75). Una voce corrisponde se tutte le sue
+  parole compaiono nel titolo completo; se ne corrispondono più di una vince il livello più alto
+  ("X Factor=alto" + "X Factor Finale=estremo")
 - più spettacoli nella stessa giornata: +5 per replica
 - Forum e Repower insieme: +10
 - feriale con inizio entro le 21:00 (afflusso in pieno rientro dal lavoro): +10
@@ -14,6 +16,8 @@ Regole (tutte modificabili qui):
 """
 from __future__ import annotations
 
+import re
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
@@ -95,21 +99,30 @@ def _run_length(ev: Event, all_events: list[Event]) -> int:
 LEVEL_FLOOR = {"basso": 1, "medio": 30, "alto": 55, "estremo": 75}
 
 
-def parse_big(entries: list[str] | None) -> list[tuple[str, str | None]]:
-    """'Laura Pausini' -> ('laura pausini', None); 'X Factor=alto' -> ('x factor', 'alto').
+def _words(text: str) -> frozenset[str]:
+    """Parole del titolo COMPLETO (senza tagliare al primo trattino come normalize_title):
+    'X FACTOR 2026 - FINALE' -> {'x', 'factor', '2026', 'finale'}."""
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower()
+    return frozenset(re.sub(r"[^a-z0-9]+", " ", text).split())
+
+
+def parse_big(entries: list[str] | None) -> list[tuple[frozenset[str], str | None]]:
+    """'Laura Pausini' -> ({'laura', 'pausini'}, None); 'X Factor Finale=estremo' -> ({'x', 'factor', 'finale'}, 'estremo').
     Un livello non riconosciuto viene ignorato (resta il +15)."""
-    out: list[tuple[str, str | None]] = []
+    out: list[tuple[frozenset[str], str | None]] = []
     for raw in entries or []:
         name, _, level = raw.partition("=")
-        norm = normalize_title(name)
+        words = _words(name)
         level = level.strip().lower() or None
-        if norm:
-            out.append((norm, level if level in LEVEL_FLOOR else None))
+        if words:
+            out.append((words, level if level in LEVEL_FLOOR else None))
     return out
 
 
-def _big_match(norm_title: str, big: list[tuple[str, str | None]]) -> tuple[str, str | None] | None:
-    return next(((b, lv) for b, lv in big if norm_title and (b in norm_title or norm_title in b)), None)
+def _big_matches(title: str, big: list[tuple[frozenset[str], str | None]]) -> list[str | None]:
+    """Livelli di tutte le voci della lista le cui parole compaiono tutte nel titolo."""
+    words = _words(title)
+    return [lv for b, lv in big if b <= words]
 
 
 def assess_day(day: date, all_events: list[Event], big_artists: list[str] | None = None) -> DayAssessment:
@@ -144,11 +157,14 @@ def assess_day(day: date, all_events: list[Event], big_artists: list[str] | None
                 score += bonus
                 reasons.append(f"{label}: {run} date di fila (+{bonus})")
 
-        match = _big_match(normalize_title(ev.title), big)
-        if match and match[1]:
-            if LEVEL_FLOOR[match[1]] > floor:
-                floor, floor_reason = LEVEL_FLOOR[match[1]], f"{label}: dalla lista big, almeno «{match[1]}»"
-        elif match:
+        matches = _big_matches(ev.title, big)
+        levels = [lv for lv in matches if lv]
+        if levels:
+            # più voci corrispondono ("X Factor=alto" e "X Factor Finale=estremo"): vince la più severa
+            top = max(levels, key=LEVEL_FLOOR.__getitem__)
+            if LEVEL_FLOOR[top] > floor:
+                floor, floor_reason = LEVEL_FLOOR[top], f"{label}: dalla lista big, almeno «{top}»"
+        elif matches:
             score += 15
             reasons.append(f"{label} è nella lista big (+15)")
 

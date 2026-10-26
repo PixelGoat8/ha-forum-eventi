@@ -51,7 +51,7 @@ Tutte le impostazioni sono in **Impostazioni › Dispositivi e servizi › Event
 | Rockol | attiva | Concerti all'Unipol Forum, come riserva |
 | EuroLeague | attiva | Partite casalinghe dell'Olimpia Milano al Forum |
 | TicketOne | spenta | Vedi [Limiti](#limiti) |
-| Eventi "big" | vuoto | Nomi separati da virgola. Un nome da solo aggiunge +15 al punteggio; `nome=livello` impone un livello minimo alla giornata (`basso`, `medio`, `alto`, `estremo`). Es.: `Laura Pausini, X Factor=alto` |
+| Eventi "big" | vuoto | Nomi separati da virgola. Un nome da solo aggiunge +15 al punteggio; `nome=livello` impone un livello minimo alla giornata (`basso`, `medio`, `alto`, `estremo`). Una voce vale se tutte le sue parole compaiono nel titolo; se ne valgono più di una vince la più severa. Es.: `Laura Pausini, X Factor=alto, X Factor Finale=estremo` |
 | Pagine extra | calendario Songkick del Forum | Una URL per riga. Sono valide le pagine che pubblicano eventi in formato [schema.org](https://schema.org/Event) (JSON-LD); vengono tenuti solo gli eventi al Forum o al Repower |
 | Giorno e ora dell'aggiornamento | lunedì, 04:00 | Quando scaricare il calendario della settimana |
 

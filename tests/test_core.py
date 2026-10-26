@@ -255,4 +255,22 @@ def test_big_level_does_not_lower_and_plain_big_still_adds():
 def test_parse_big():
     from custom_components.forum_eventi.scoring import parse_big
     assert parse_big(["X Factor = Estremo", "Laura Pausini", " ", "Foo=xyz"]) == [
-        ("x factor", "estremo"), ("laura pausini", None), ("foo", None)]
+        (frozenset({"x", "factor"}), "estremo"), (frozenset({"laura", "pausini"}), None), (frozenset({"foo"}), None)]
+
+
+def test_big_full_title_words_and_most_severe_level_wins():
+    # Calendario X Factor 2026: live il giovedì al Repower, finale giovedì 3/12 al Forum
+    live = ev("X FACTOR 2026 - LIVE", (2026, 11, 5), 0, venue=VENUE_REPOWER, cat=CAT_THEATRE)
+    finale = ev("X FACTOR 2026 - FINALE", (2026, 12, 3), 0, cat="altro")
+    big = ["X Factor=alto", "X Factor Finale=estremo"]
+    assert assess_day(date(2026, 11, 5), [live], big_artists=big).level == "alto"
+    a = assess_day(date(2026, 12, 3), [finale], big_artists=big)
+    assert a.level == "estremo" and any("estremo" in r for r in a.reasons)
+    # l'ordine delle voci non conta
+    assert assess_day(date(2026, 12, 3), [finale], big_artists=list(reversed(big))).level == "estremo"
+
+
+def test_big_matches_words_after_dash_or_colon():
+    game = ev("Eurolega: Armani Olimpia Milano vs Valencia Basket", (2026, 11, 5), 0, cat=CAT_SPORT)
+    a = assess_day(date(2026, 11, 5), [game], big_artists=["Olimpia"])
+    assert any("lista big" in r for r in a.reasons)
