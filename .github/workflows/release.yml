@@ -7,6 +7,10 @@ on:
   push:
     tags: ["v*"]
 
+# Node 20 è deprecato su GitHub Actions: anche le action interne di hassfest e HACS girano su Node 24
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: write
 
@@ -14,7 +18,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Versione tag = versione manifest
         run: |
           manifest=$(python3 -c "import json;print(json.load(open('custom_components/forum_eventi/manifest.json'))['version'])")
