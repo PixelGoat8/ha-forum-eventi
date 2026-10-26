@@ -1,0 +1,65 @@
+{
+ "data": [
+  {
+   "played": false,
+   "utcDate": "2026-10-13T18:30:00Z",
+   "local": {
+    "club": {
+     "code": "MIL",
+     "abbreviatedName": "Milan"
+    }
+   },
+   "road": {
+    "club": {
+     "code": "MAD",
+     "abbreviatedName": "Real Madrid"
+    }
+   },
+   "venue": {
+    "name": "UNIPOL FORUM",
+    "code": "ASX8"
+   }
+  },
+  {
+   "played": false,
+   "utcDate": "2026-10-27T19:15:00Z",
+   "local": {
+    "club": {
+     "code": "PAN",
+     "abbreviatedName": "Panathinaikos"
+    }
+   },
+   "road": {
+    "club": {
+     "code": "MIL",
+     "abbreviatedName": "Milan"
+    }
+   },
+   "venue": {
+    "name": "TELEKOM CENTER ATHENS",
+    "code": "AUM6"
+   }
+  },
+  {
+   "played": true,
+   "utcDate": "2026-09-29T18:30:00Z",
+   "local": {
+    "club": {
+     "code": "MIL",
+     "abbreviatedName": "Milan"
+    }
+   },
+   "road": {
+    "club": {
+     "code": "VIR",
+     "abbreviatedName": "Virtus Bologna"
+    }
+   },
+   "venue": {
+    "name": "UNIPOL FORUM",
+    "code": "ASX8"
+   }
+  }
+ ],
+ "total": 3
+}

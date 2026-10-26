@@ -1,0 +1,38 @@
+# Notifica push mattutina sugli eventi di oggi al Forum/Repower.
+# Incolla in Impostazioni > Automazioni > Nuova > ⋮ Modifica in YAML.
+# Sostituisci notify.mobile_app_iphone con il tuo servizio di notifica.
+alias: Forum – avviso eventi del giorno
+description: Push al mattino se oggi c'è un evento al Forum o al Teatro Repower
+mode: single
+triggers:
+  - trigger: time
+    at: "07:30:00"
+conditions:
+  - condition: state
+    entity_id: binary_sensor.forum_evento_oggi
+    state: "on"
+actions:
+  - variables:
+      a: "{{ states.sensor.forum_casino_oggi.attributes }}"
+      livello: "{{ states('sensor.forum_casino_oggi') }}"
+      emoji: >-
+        {{ {'basso': '🟢', 'medio': '🟡', 'alto': '🟠', 'estremo': '🔴'}.get(livello, 'ℹ️') }}
+      eventi: |-
+        {% for e in a.eventi -%}
+        • {{ e.titolo }} — {{ e.venue }}, {{ e.orari | join('/') if e.orari else 'orario n.d.' }}{{ ' (SOLD OUT)' if e.sold_out }}
+        {% endfor %}
+  - action: notify.mobile_app_iphone
+    data:
+      title: "{{ emoji }} Forum oggi: casino {{ livello }} ({{ a.punteggio }}/100)"
+      message: |-
+        {{ eventi | trim }}
+        {%- if states('sensor.forum_casino_domani') not in ['nessuno', 'unknown', 'unavailable'] %}
+        Domani: casino {{ states('sensor.forum_casino_domani') }}.
+        {%- endif %}
+      data:
+        url: /lovelace/panoramica
+        group: forum-eventi
+        # Livelli alto/estremo superano la modalità Full Immersion su iOS
+        push:
+          interruption-level: >-
+            {{ 'time-sensitive' if livello in ['alto', 'estremo'] else 'active' }}

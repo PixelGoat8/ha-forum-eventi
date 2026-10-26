@@ -1,0 +1,36 @@
+# Card di avviso per la vista Panoramica (dashboard Casa, Sections).
+# Si mostra da sola solo nei giorni con eventi, come le altre card di allerta.
+# Da incollare nel Raw Configuration Editor dentro la "cards:" di una sezione.
+- type: markdown
+  visibility:
+    - condition: state
+      entity: binary_sensor.forum_evento_oggi
+      state: "on"
+  content: >-
+    {% set a = states.sensor.forum_casino_oggi.attributes %}
+    {% set lv = states('sensor.forum_casino_oggi') %}
+    {% set tipo = {'basso': 'info', 'medio': 'warning', 'alto': 'error', 'estremo': 'error'}.get(lv, 'info') %}
+    <ha-alert alert-type="{{ tipo }}" title="Forum oggi: casino {{ lv }} · {{ a.punteggio }}/100">
+    {% for e in a.eventi -%}
+    <b>{{ e.titolo }}</b> — {{ e.venue }}, {{ e.orari | join('/') if e.orari else 'orario n.d.' }}{{ ' · <b>SOLD OUT</b>' if e.sold_out }}<br>
+    {% endfor -%}
+    {% if states('sensor.forum_casino_domani') not in ['nessuno', 'unknown', 'unavailable'] %}
+    <i>Domani: casino {{ states('sensor.forum_casino_domani') }}</i>
+    {% endif %}
+    </ha-alert>
+
+# Facoltativa: settimana a colpo d'occhio, visibile solo se ci sono eventi nei 7 giorni.
+- type: markdown
+  visibility:
+    - condition: numeric_state
+      entity: sensor.forum_prossimi_7_giorni
+      above: 0
+  content: >-
+    **Forum & Repower, prossimi 7 giorni**
+
+    {% for g in state_attr('sensor.forum_prossimi_7_giorni', 'giorni') or [] -%}
+    {% set d = as_datetime(g.giorno) %}
+    {{ {'basso': '🟢', 'medio': '🟡', 'alto': '🟠', 'estremo': '🔴'}.get(g.livello, '⚪') }}
+    **{{ ['lun','mar','mer','gio','ven','sab','dom'][d.weekday()] }} {{ d.strftime('%d/%m') }}** — {{ g.riepilogo }}
+
+    {% endfor %}

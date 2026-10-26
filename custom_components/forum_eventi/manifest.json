@@ -1,0 +1,14 @@
+{
+  "domain": "forum_eventi",
+  "name": "Eventi Forum & Repower",
+  "codeowners": ["@pixelgoat8"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/pixelgoat8/ha-forum-eventi",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/pixelgoat8/ha-forum-eventi/issues",
+  "requirements": ["beautifulsoup4>=4.12"],
+  "single_config_entry": true,
+  "version": "0.2.0"
+}

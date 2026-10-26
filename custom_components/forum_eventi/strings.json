@@ -1,0 +1,91 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Eventi Forum & Repower",
+        "description": "Monitora gli eventi all'Unipol Forum e al Teatro Repower di Assago. Dopo l'installazione regola fonti e lista 'big' dalle opzioni."
+      }
+    },
+    "abort": {
+      "already_configured": "Già configurato.",
+      "single_instance_allowed": "Già configurato."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Fonti e punteggio",
+        "data": {
+          "use_ticketone": "TicketOne (spesso bloccato dalla protezione anti-bot)",
+          "use_rockol": "Rockol (concerti al Forum)",
+          "use_euroleague": "EuroLeague (partite Olimpia al Forum)",
+          "big_artists": "Artisti 'big' (separati da virgola, +15 al punteggio)",
+          "extra_urls": "Pagine extra con eventi JSON-LD (una per riga)",
+          "refresh_weekday": "Giorno dell'aggiornamento settimanale",
+          "refresh_hour": "Ora dell'aggiornamento"
+        },
+        "data_description": {
+          "extra_urls": "Pagine con eventi schema.org JSON-LD (es. il calendario Songkick del Forum). Vengono tenuti solo gli eventi con location Forum o Repower.",
+          "big_artists": "Es.: Laura Pausini, Vasco Rossi, Ultimo"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "casino_oggi": {
+        "name": "Casino oggi",
+        "state": {
+          "nessuno": "Nessuno",
+          "basso": "Basso",
+          "medio": "Medio",
+          "alto": "Alto",
+          "estremo": "Estremo"
+        }
+      },
+      "casino_domani": {
+        "name": "Casino domani",
+        "state": {
+          "nessuno": "Nessuno",
+          "basso": "Basso",
+          "medio": "Medio",
+          "alto": "Alto",
+          "estremo": "Estremo"
+        }
+      },
+      "punteggio_oggi": {
+        "name": "Punteggio oggi"
+      },
+      "prossimo_evento": {
+        "name": "Prossimo evento"
+      },
+      "prossimi_7_giorni": {
+        "name": "Prossimi 7 giorni"
+      },
+      "ultimo_aggiornamento": {
+        "name": "Ultimo aggiornamento"
+      }
+    },
+    "binary_sensor": {
+      "evento_oggi": {
+        "name": "Evento oggi"
+      }
+    },
+    "calendar": {
+      "eventi": {
+        "name": "Eventi"
+      }
+    },
+    "button": {
+      "aggiorna_eventi": {
+        "name": "Aggiorna eventi"
+      }
+    }
+  },
+  "services": {
+    "aggiorna": {
+      "name": "Aggiorna eventi",
+      "description": "Scarica subito gli eventi da tutte le fonti."
+    }
+  }
+}

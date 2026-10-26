@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+# output di tools/forum_probe.py --raw e pacchetti costruiti a mano
+raw_*.html
+*.zip
