@@ -110,7 +110,7 @@ L'attributo `motivi` di `sensor.forum_casino_oggi` elenca le regole applicate, c
 
 Nella cartella [`ha_config`](ha_config) trovi due esempi pronti da adattare.
 
-- **[Notifica mattutina](ha_config/automazione_forum.yaml)**: alle 7:30, se oggi c'è un evento, manda una notifica con gli eventi, gli orari e il livello di domani. Sostituisci `notify.mobile_app_iphone` con il tuo servizio di notifica. Su iOS i livelli alto ed estremo superano le modalità Full Immersion.
+- **[Notifica mattutina](ha_config/automazione_forum.yaml)**: alle 7:30, se oggi c'è un evento, manda una notifica con gli eventi, gli orari e il livello di domani. Sostituisci `notify.notify` con il tuo servizio. Funziona su iOS (i livelli alto ed estremo superano le modalità Full Immersion) e su Android (priorità alta e canale dedicato).
 - **[Card per la dashboard](ha_config/card_panoramica.yaml)**: un avviso colorato secondo il livello, visibile solo nei giorni con eventi, più una card facoltativa con la settimana.
 
 Un'automazione minima:
@@ -129,6 +129,21 @@ actions:
       title: "Forum: oggi casino {{ states('sensor.forum_casino_oggi') }}"
       message: "{{ state_attr('sensor.forum_casino_oggi', 'riepilogo') }}"
 ```
+
+### Notifiche su più dispositivi
+
+Per mandare l'avviso a più telefoni o tablet scegliendo quali, crea un gruppo di notifica in `configuration.yaml` e usa `notify.telefoni` nell'automazione:
+
+```yaml
+notify:
+  - platform: group
+    name: telefoni
+    services:
+      - action: mobile_app_iphone      # i nomi esatti sono in Strumenti per sviluppatori › Azioni
+      - action: mobile_app_pixel
+```
+
+Il gruppo inoltra anche i parametri `data` (link, priorità, livello iOS). Serve un riavvio di Home Assistant.
 
 ## Fonti dei dati
 

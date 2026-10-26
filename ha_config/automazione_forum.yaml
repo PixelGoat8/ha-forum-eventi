@@ -1,6 +1,8 @@
 # Notifica push mattutina sugli eventi di oggi al Forum/Repower.
 # Incolla in Impostazioni > Automazioni > Nuova > ⋮ Modifica in YAML.
-# Sostituisci notify.mobile_app_iphone con il tuo servizio di notifica.
+# Sostituisci notify.notify con il tuo servizio: un singolo telefono (notify.mobile_app_…)
+# o, meglio, un gruppo di notifica con i dispositivi che vuoi (vedi README).
+# Prova immediata: ⋮ > Esegui azioni (salta orario e condizioni).
 alias: Forum – avviso eventi del giorno
 description: Push al mattino se oggi c'è un evento al Forum o al Teatro Repower
 mode: single
@@ -15,13 +17,14 @@ actions:
   - variables:
       a: "{{ states.sensor.forum_casino_oggi.attributes }}"
       livello: "{{ states('sensor.forum_casino_oggi') }}"
+      urgente: "{{ livello in ['alto', 'estremo'] }}"
       emoji: >-
         {{ {'basso': '🟢', 'medio': '🟡', 'alto': '🟠', 'estremo': '🔴'}.get(livello, 'ℹ️') }}
       eventi: |-
         {% for e in a.eventi -%}
         • {{ e.titolo }} — {{ e.venue }}, {{ e.orari | join('/') if e.orari else 'orario n.d.' }}{{ ' (SOLD OUT)' if e.sold_out }}
         {% endfor %}
-  - action: notify.mobile_app_iphone
+  - action: notify.notify
     data:
       title: "{{ emoji }} Forum oggi: casino {{ livello }} ({{ a.punteggio }}/100)"
       message: |-
@@ -30,9 +33,11 @@ actions:
         Domani: casino {{ states('sensor.forum_casino_domani') }}.
         {%- endif %}
       data:
-        url: /lovelace/panoramica
         group: forum-eventi
-        # Livelli alto/estremo superano la modalità Full Immersion su iOS
+        tag: forum-eventi                    # la notifica nuova sostituisce quella del giorno prima
+        url: /lovelace/panoramica            # iOS: pagina da aprire (adatta al percorso della tua dashboard)
+        clickAction: /lovelace/panoramica    # Android
         push:
-          interruption-level: >-
-            {{ 'time-sensitive' if livello in ['alto', 'estremo'] else 'active' }}
+          interruption-level: "{{ 'time-sensitive' if urgente else 'active' }}"   # iOS: supera Full Immersion
+        priority: "{{ 'high' if urgente else 'normal' }}"                         # Android
+        channel: Forum eventi                # Android: canale dedicato, regolabile dal telefono
