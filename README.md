@@ -139,7 +139,7 @@ actions:
 
 Quando due fonti riportano lo stesso evento, l'integrazione lo conta una volta sola e tiene l'orario se almeno una delle due lo conosce.
 
-Le richieste sono poche e distanziate: una raccolta a settimana, con le pause tra le pagine indicate nel `robots.txt` di ciascun sito. I siti che vietano l'accesso automatico non vengono usati.
+Le richieste sono poche e distanziate: una raccolta a settimana, con le pause tra le pagine indicate nel `robots.txt` di ciascun sito, e solo su pagine che il `robots.txt` consente.
 
 ## Limiti
 
@@ -147,7 +147,7 @@ Le richieste sono poche e distanziate: una raccolta a settimana, con le pause tr
 - **Serie A di basket**: le partite di campionato dell'Olimpia non sono incluse, solo quelle di EuroLeague.
 - **Sold out**: le fonti attive di solito non indicano i sold out, quindi quel bonus scatta raramente.
 - **TicketOne**: è la fonte più completa, ma blocca le richieste che non arrivano da un browser. L'opzione esiste ma è spenta, e di solito fallisce dopo 30 secondi.
-- **Siti ufficiali** di Forum e Repower: non vengono letti perché il loro `robots.txt` lo vieta.
+- **Siti ufficiali** di Forum e Repower: non sono ancora usati come fonte (in valutazione).
 - I dati dipendono da siti di terze parti e possono essere incompleti o cambiare senza preavviso. Usa l'indice come indicazione, non come certezza.
 
 ## Risoluzione dei problemi
