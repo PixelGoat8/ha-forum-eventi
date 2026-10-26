@@ -20,14 +20,14 @@
           "use_rockol": "Rockol (concerti al Forum)",
           "use_euroleague": "EuroLeague (partite Olimpia al Forum)",
           "use_ticketone": "TicketOne (spesso bloccato dalla protezione anti-bot)",
-          "big_artists": "Artisti 'big' (separati da virgola, +15 al punteggio)",
+          "big_artists": "Eventi 'big' (separati da virgola)",
           "extra_urls": "Pagine extra con eventi JSON-LD (una per riga)",
           "refresh_weekday": "Giorno dell'aggiornamento settimanale",
           "refresh_hour": "Ora dell'aggiornamento"
         },
         "data_description": {
           "extra_urls": "Pagine con eventi schema.org JSON-LD (es. il calendario Songkick del Forum). Vengono tenuti solo gli eventi con location Forum o Repower.",
-          "big_artists": "Es.: Laura Pausini, Vasco Rossi, Ultimo"
+          "big_artists": "Nome = +15 al punteggio. Nome=livello (basso, medio, alto, estremo) = la giornata non scende sotto quel livello. Es.: Laura Pausini, X Factor=alto"
         }
       }
     }

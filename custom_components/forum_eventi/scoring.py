@@ -5,7 +5,8 @@ Regole (tutte modificabili qui):
 - sold out: +15 (Forum) / +5 (Repower)
 - più date di fila dello stesso artista al Forum: +10 per serata in più (max +20)
   -> "Pausini tre sere di fila" = base 45 + 20 + eventuale sold out
-- artista nella tua lista 'big': +15
+- evento nella tua lista 'big': +15; con un livello ("X Factor=alto") la giornata non scende
+  sotto quel livello (minimo: medio 30, alto 55, estremo 75)
 - più spettacoli nella stessa giornata: +5 per replica
 - Forum e Repower insieme: +10
 - feriale con inizio entro le 21:00 (afflusso in pieno rientro dal lavoro): +10
@@ -91,14 +92,35 @@ def _run_length(ev: Event, all_events: list[Event]) -> int:
     return (end - start).days + 1
 
 
+LEVEL_FLOOR = {"basso": 1, "medio": 30, "alto": 55, "estremo": 75}
+
+
+def parse_big(entries: list[str] | None) -> list[tuple[str, str | None]]:
+    """'Laura Pausini' -> ('laura pausini', None); 'X Factor=alto' -> ('x factor', 'alto').
+    Un livello non riconosciuto viene ignorato (resta il +15)."""
+    out: list[tuple[str, str | None]] = []
+    for raw in entries or []:
+        name, _, level = raw.partition("=")
+        norm = normalize_title(name)
+        level = level.strip().lower() or None
+        if norm:
+            out.append((norm, level if level in LEVEL_FLOOR else None))
+    return out
+
+
+def _big_match(norm_title: str, big: list[tuple[str, str | None]]) -> tuple[str, str | None] | None:
+    return next(((b, lv) for b, lv in big if norm_title and (b in norm_title or norm_title in b)), None)
+
+
 def assess_day(day: date, all_events: list[Event], big_artists: list[str] | None = None) -> DayAssessment:
     todays = [e for e in all_events if e.start.date() == day]
     result = DayAssessment(day=day, events=todays)
     if not todays:
         return result
 
-    big = [normalize_title(b) for b in (big_artists or []) if b.strip()]
+    big = parse_big(big_artists)
     score = 0
+    floor = 0
     reasons: list[str] = []
 
     for ev in todays:
@@ -122,8 +144,11 @@ def assess_day(day: date, all_events: list[Event], big_artists: list[str] | None
                 score += bonus
                 reasons.append(f"{label}: {run} date di fila (+{bonus})")
 
-        norm = normalize_title(ev.title)
-        if any(b and (b in norm or norm in b) for b in big):
+        match = _big_match(normalize_title(ev.title), big)
+        if match and match[1]:
+            if LEVEL_FLOOR[match[1]] > floor:
+                floor, floor_reason = LEVEL_FLOOR[match[1]], f"{label}: dalla lista big, almeno «{match[1]}»"
+        elif match:
             score += 15
             reasons.append(f"{label} è nella lista big (+15)")
 
@@ -150,6 +175,9 @@ def assess_day(day: date, all_events: list[Event], big_artists: list[str] | None
         score += 5
         reasons.append("venerdì/sabato sera (+5)")
 
+    if floor > score:
+        reasons.append(f"{floor_reason} (portato a {floor})")
+        score = floor
     result.score = max(0, min(100, score))
     result.level = level_for(result.score)
     result.reasons = reasons

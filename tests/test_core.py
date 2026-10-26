@@ -231,3 +231,28 @@ def test_forum_official_rows_and_sport_stay_separate():
     ])
     assert len(merged) == 5           # C finisce in A; il Repower non è toccato dalla regola
     assert "rockol" in next(m for m in merged if m.title == "Spettacolo A").sources
+
+
+# ---------------------------------------------------------------- lista big con livello minimo
+def test_big_with_level_floor_on_repower():
+    xf = [ev("X FACTOR 2026 - LIVE", (2026, 10, 29), 0, venue=VENUE_REPOWER, cat=CAT_THEATRE, src="ufficiale")]
+    plain = assess_day(date(2026, 10, 29), xf)
+    assert plain.level == "basso"
+    boosted = assess_day(date(2026, 10, 29), xf, big_artists=["X Factor=alto"])
+    assert boosted.score == 55 and boosted.level == "alto"
+    assert any("almeno «alto»" in r for r in boosted.reasons)
+
+
+def test_big_level_does_not_lower_and_plain_big_still_adds():
+    pausini = [ev("Laura Pausini", (2026, 10, d), sold=True) for d in (5, 6, 7)]
+    a = assess_day(date(2026, 10, 6), pausini, big_artists=["Laura Pausini=medio"])
+    assert a.score == 90                                   # il livello minimo non abbassa mai
+    b = assess_day(date(2026, 10, 13), [ev("Olimpia – Real", (2026, 10, 13), 20, 30, cat=CAT_SPORT)],
+                   big_artists=["Olimpia", "X Factor=boh"])
+    assert b.score == 55                                   # senza livello: +15 come prima; livello ignoto ignorato
+
+
+def test_parse_big():
+    from custom_components.forum_eventi.scoring import parse_big
+    assert parse_big(["X Factor = Estremo", "Laura Pausini", " ", "Foo=xyz"]) == [
+        ("x factor", "estremo"), ("laura pausini", None), ("foo", None)]

@@ -51,7 +51,7 @@ Tutte le impostazioni sono in **Impostazioni › Dispositivi e servizi › Event
 | Rockol | attiva | Concerti all'Unipol Forum, come riserva |
 | EuroLeague | attiva | Partite casalinghe dell'Olimpia Milano al Forum |
 | TicketOne | spenta | Vedi [Limiti](#limiti) |
-| Artisti "big" | vuoto | Nomi separati da virgola che aggiungono +15 al punteggio, es. `Laura Pausini, Vasco Rossi` |
+| Eventi "big" | vuoto | Nomi separati da virgola. Un nome da solo aggiunge +15 al punteggio; `nome=livello` impone un livello minimo alla giornata (`basso`, `medio`, `alto`, `estremo`). Es.: `Laura Pausini, X Factor=alto` |
 | Pagine extra | calendario Songkick del Forum | Una URL per riga. Sono valide le pagine che pubblicano eventi in formato [schema.org](https://schema.org/Event) (JSON-LD); vengono tenuti solo gli eventi al Forum o al Repower |
 | Giorno e ora dell'aggiornamento | lunedì, 04:00 | Quando scaricare il calendario della settimana |
 
@@ -85,7 +85,7 @@ Ogni evento del giorno contribuisce con una base, a cui si sommano dei bonus. Il
 | Spettacolo al Teatro Repower | 12 |
 | Sold out | +15 al Forum, +5 al Repower |
 | Stesso artista più sere di fila al Forum | +10 per ogni sera in più, fino a +20 |
-| Artista nella lista "big" | +15 |
+| Evento nella lista "big" | +15, oppure il livello minimo indicato (`nome=alto` porta la giornata almeno a 55) |
 | Più repliche nello stesso giorno | +5 per ogni replica in più |
 | Forum e Repower nello stesso giorno | +10 |
 | Giorno feriale con inizio entro le 21:00 (o orario non noto al Forum) | +10 |
