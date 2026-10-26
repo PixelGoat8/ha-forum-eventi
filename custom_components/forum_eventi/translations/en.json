@@ -104,5 +104,11 @@
       "name": "Aggiorna eventi",
       "description": "Scarica subito gli eventi da tutte le fonti."
     }
+  },
+  "issues": {
+    "fonte_non_funziona": {
+      "title": "Eventi Forum: la fonte {fonte} non funziona",
+      "description": "Nelle ultime {volte} raccolte la fonte **{fonte}** non ha restituito eventi.\n\nDettaglio: {dettaglio}\n\nLe altre fonti continuano a funzionare e la segnalazione sparisce da sola quando la fonte torna a rispondere. Se resta, probabilmente il sito ha cambiato struttura: scarica la diagnostica dell'integrazione e apri una segnalazione su GitHub. Chi ha il repository può provare la fonte con `py -X utf8 tools/forum_probe.py --raw`, che salva le pagine grezze. Per non usare più la fonte, spegnila nelle opzioni dell'integrazione."
+    }
   }
 }

@@ -126,6 +126,28 @@ async def main() -> int:
         await hass.services.async_call("button", "press", {"entity_id": "button.forum_aggiorna_eventi"}, blocking=True)
         await hass.services.async_call("forum_eventi", "aggiorna", {}, blocking=True)
 
+        # riparazioni: Rockol a 0 eventi per due raccolte -> segnalazione; torna a funzionare -> via
+        from homeassistant.helpers import issue_registry as ir
+        issue = ("forum_eventi", "fonte_rockol_forum")
+        fake.per_source["rockol_forum"] = 0
+        for _ in range(2):
+            await hass.services.async_call("forum_eventi", "aggiorna", {}, blocking=True)
+        if issue not in ir.async_get(hass).issues:
+            print("segnalazione Rockol mancante:", list(ir.async_get(hass).issues)); errors += 1
+        else:
+            print("riparazione:", ir.async_get(hass).issues[issue].translation_placeholders)
+        fake.per_source["rockol_forum"] = 12
+        await hass.services.async_call("forum_eventi", "aggiorna", {}, blocking=True)
+        if issue in ir.async_get(hass).issues:
+            print("segnalazione Rockol non rimossa"); errors += 1
+
+        # diagnostica
+        from custom_components.forum_eventi.diagnostics import async_get_config_entry_diagnostics
+        diag = await async_get_config_entry_diagnostics(hass, entry)
+        print("diagnostica:", {k: diag[k] for k in ("eventi_totali", "fallimenti_consecutivi", "eventi_senza_orario")})
+        if diag["fallimenti_consecutivi"].get("rockol_forum") != 0 or not diag["prossimi_eventi"]:
+            print("diagnostica inattesa"); errors += 1
+
         # Render dei template di automazione e card con i dati veri
         import yaml
         from homeassistant.helpers.template import Template

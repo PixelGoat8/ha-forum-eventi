@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date, datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.storage import Store
@@ -17,7 +19,10 @@ from .const import (
     CONF_REFRESH_WEEKDAY, CONF_USE_EUROLEAGUE, CONF_USE_EVENT_PAGES, CONF_USE_OFFICIAL, CONF_USE_ROCKOL,
     CONF_USE_TICKETONE, DEFAULTS, DOMAIN, STALE_AFTER_DAYS, STORAGE_VERSION,
 )
-from .fetch import fetch_all, fetch_event_pages, prune_page_cache
+from .fetch import (
+    BROKEN_AFTER, FetchReport, failure_detail, fetch_all, fetch_event_pages, prune_page_cache, source_failures,
+    source_label,
+)
 from .models import Event
 from .scoring import DayAssessment, assess_day
 from .sources.forumnet import apply_page_times
@@ -46,6 +51,7 @@ class ForumCoordinator(DataUpdateCoordinator[ForumData]):
         self._unsubs: list = []
         self._page_cache: dict[str, dict] = {}     # url pagina evento -> {"letto", "programma"}
         self._pages_task = None
+        self.failures: dict[str, int] = {}             # fonte -> raccolte consecutive fallite
 
     # ------------------------------------------------------------- opzioni
     def opt(self, key: str):
@@ -66,6 +72,7 @@ class ForumCoordinator(DataUpdateCoordinator[ForumData]):
         if cached:
             fetched_at = dt_util.parse_datetime(cached.get("fetched_at") or "")
             self._page_cache = cached.get("pagine_evento", {})
+            self.failures = cached.get("fallimenti", {})
             self.async_set_updated_data(ForumData(
                 [Event.from_dict(e) for e in cached.get("events", [])],
                 fetched_at, cached.get("per_source", {}), cached.get("errors", {}),
@@ -112,10 +119,12 @@ class ForumCoordinator(DataUpdateCoordinator[ForumData]):
             use_euroleague=bool(self.opt(CONF_USE_EUROLEAGUE)),
             extra_urls=self.extra_urls,
         )
+        self._update_issues(report)
         if not report.per_source:
             # tutte le fonti in errore: tengo i dati vecchi se ci sono
             if self.data:
                 self.data.errors = report.errors
+                await self._async_save(self.data)
                 return self.data
             raise UpdateFailed(f"Nessuna fonte raggiungibile: {report.errors}")
 
@@ -135,7 +144,38 @@ class ForumCoordinator(DataUpdateCoordinator[ForumData]):
             "per_source": data.per_source,
             "errors": data.errors,
             "pagine_evento": self._page_cache,
+            "fallimenti": self.failures,
         })
+
+    # ------------------------------------------------------- riparazioni
+    @staticmethod
+    def _issue_id(source: str) -> str:
+        return "fonte_" + re.sub(r"[^a-z0-9]+", "_", source.lower()).strip("_")[:80]
+
+    @callback
+    def _update_issues(self, report: FetchReport) -> None:
+        """Segnala in Impostazioni › Riparazioni le fonti rotte da BROKEN_AFTER raccolte di fila;
+        toglie la segnalazione quando tornano a funzionare o vengono spente."""
+        previous = self.failures
+        self.failures = source_failures(previous, report)
+        for source in set(previous) | set(self.failures):
+            issue_id = self._issue_id(source)
+            count = self.failures.get(source, 0)
+            if count >= BROKEN_AFTER:
+                ir.async_create_issue(
+                    self.hass, DOMAIN, issue_id,
+                    is_fixable=False,
+                    severity=ir.IssueSeverity.WARNING,
+                    translation_key="fonte_non_funziona",
+                    translation_placeholders={
+                        "fonte": source_label(source),
+                        "volte": str(count),
+                        "dettaglio": failure_detail(source, report),
+                    },
+                    learn_more_url="https://github.com/PixelGoat8/ha-forum-eventi#risoluzione-dei-problemi",
+                )
+            else:
+                ir.async_delete_issue(self.hass, DOMAIN, issue_id)
 
     # ------------------------------------------------------- pagine evento (orari)
     @callback
@@ -167,6 +207,10 @@ class ForumCoordinator(DataUpdateCoordinator[ForumData]):
 
     def today(self) -> date:
         return dt_util.now().date()
+
+    @property
+    def pages_in_cache(self) -> int:
+        return len(self._page_cache)
 
     def windows(self, first_day: date, last_day: date) -> list[Window]:
         events = self.data.events if self.data else []

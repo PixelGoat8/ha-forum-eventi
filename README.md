@@ -302,6 +302,10 @@ Le richieste sono poche e distanziate: una raccolta a settimana, con le pause tr
 
 ## Risoluzione dei problemi
 
+**Riparazioni.** Se una fonte dà errore o non trova eventi per 2 raccolte di fila, compare un avviso in **Impostazioni › Sistema › Riparazioni** con il nome della fonte e il motivo. Le altre fonti continuano a funzionare. L'avviso sparisce da solo quando la fonte torna a rispondere o quando la spegni nelle opzioni.
+
+**Diagnostica.** In **Impostazioni › Dispositivi e servizi › Eventi Forum & Repower › ⋮ › Scarica diagnostica** ottieni un file con opzioni, eventi per fonte, errori, raccolte fallite di fila e i prossimi eventi. Allegalo quando apri una segnalazione: non contiene dati personali.
+
 **Mancano eventi o i sensori sono vuoti.** Apri `sensor.forum_ultimo_aggiornamento` e guarda gli attributi:
 - `errori`: la fonte non era raggiungibile; di solito si risolve al giro successivo o premendo **Aggiorna eventi**.
 - `fonti_vuote`: la fonte ha risposto ma non sono stati trovati eventi. Probabilmente il sito ha cambiato struttura: [apri una issue](https://github.com/PixelGoat8/ha-forum-eventi/issues).

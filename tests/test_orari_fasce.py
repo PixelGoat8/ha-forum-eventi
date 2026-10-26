@@ -194,3 +194,19 @@ def test_weekday_matinee_gets_no_rush_bonus():
     both.times = ["12:00", "20:30"]                     # conta lo spettacolo serale
     a = assess_day(date(2027, 1, 5), [both])
     assert any("inizio alle 20:30" in r for r in a.reasons) and a.score == 12 + 5 + 10
+
+
+# ---------------------------------------------------------------- fonti rotte (riparazioni)
+def test_source_failures_counting():
+    from custom_components.forum_eventi.fetch import FetchReport, failure_detail, source_failures, source_label
+    r1 = FetchReport(per_source={"ufficiale_forum": 82, "rockol_forum": 0}, errors={"euroleague": "TimeoutError: x"})
+    f1 = source_failures({}, r1)
+    assert f1 == {"ufficiale_forum": 0, "rockol_forum": 1, "euroleague": 1}
+    r2 = FetchReport(per_source={"ufficiale_forum": 80, "rockol_forum": 0, "euroleague": 15})
+    f2 = source_failures(f1, r2)
+    assert f2 == {"ufficiale_forum": 0, "rockol_forum": 2, "euroleague": 0}     # EuroLeague tornata: azzerata
+    assert source_failures(f2, FetchReport(per_source={"ufficiale_forum": 80})) == {"ufficiale_forum": 0}  # Rockol spenta
+    assert failure_detail("euroleague", r1) == "TimeoutError: x"
+    assert "0" not in failure_detail("rockol_forum", r1) and "struttura" in failure_detail("rockol_forum", r1)
+    assert source_label("rockol_forum") == "Rockol"
+    assert source_label("https://www.songkick.com/venues/4565288-unipol-forum/calendar") == "songkick.com"

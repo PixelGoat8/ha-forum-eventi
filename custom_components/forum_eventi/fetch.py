@@ -7,6 +7,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from datetime import date
+from urllib.parse import urlparse
 
 import aiohttp
 
@@ -42,6 +43,38 @@ async def _get_text(session: aiohttp.ClientSession, url: str) -> str:
         raise TimeoutError(f"nessuna risposta entro {TIMEOUT.total}s da {url}") from err
     _LOGGER.info("GET %s -> %s, %d KB in %.1fs", url, resp.status, len(text) // 1024, time.monotonic() - t0)
     return text
+
+
+# Dopo quante raccolte di fila con errore o 0 eventi una fonte va segnalata come rotta
+BROKEN_AFTER = 2
+
+SOURCE_LABELS = {
+    "ufficiale_forum": "sito ufficiale dell'Unipol Forum",
+    "ufficiale_repower": "sito ufficiale del Teatro Repower",
+    "rockol_forum": "Rockol",
+    "euroleague": "EuroLeague",
+    "ticketone_forum": "TicketOne (Unipol Forum)",
+    "ticketone_repower": "TicketOne (Teatro Repower)",
+}
+
+
+def source_label(name: str) -> str:
+    """Nome leggibile di una fonte; per le pagine extra il dominio."""
+    return SOURCE_LABELS.get(name) or (urlparse(name).hostname or name).removeprefix("www.")
+
+
+def source_failures(previous: dict[str, int], report: FetchReport) -> dict[str, int]:
+    """Raccolte consecutive fallite per ogni fonte usata in questa raccolta (errore oppure 0 eventi).
+    Le fonti non più usate (spente dalle opzioni) spariscono."""
+    out: dict[str, int] = {}
+    for name in [*report.per_source, *report.errors]:
+        failed = name in report.errors or report.per_source.get(name, 0) == 0
+        out[name] = previous.get(name, 0) + 1 if failed else 0
+    return out
+
+
+def failure_detail(name: str, report: FetchReport) -> str:
+    return report.errors.get(name) or "nessun evento trovato: probabilmente il sito ha cambiato struttura"
 
 
 async def fetch_ticketone(session: aiohttp.ClientSession, venue: str) -> list[Event]:

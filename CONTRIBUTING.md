@@ -10,6 +10,7 @@ custom_components/forum_eventi/
 ├── scoring.py        regole dell'indice di casino
 ├── windows.py        fasce di afflusso e deflusso
 ├── coordinator.py    aggiornamento settimanale, cache su disco, ricalcolo a mezzanotte
+├── diagnostics.py    diagnostica scaricabile della config entry
 └── sensor.py, binary_sensor.py, calendar.py, button.py
 tests/                test dei parser, dell'unione e del punteggio
 tools/forum_probe.py  prova delle fonti fuori da Home Assistant

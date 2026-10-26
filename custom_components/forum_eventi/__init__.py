@@ -4,6 +4,7 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers import issue_registry as ir
 
 from .const import DOMAIN, SERVICE_REFRESH
 from .coordinator import ForumCoordinator
@@ -32,6 +33,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ForumConfigEntry) -> boo
 
 async def _options_updated(hass: HomeAssistant, entry: ForumConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ForumConfigEntry) -> None:
+    """Integrazione rimossa: via anche le segnalazioni delle fonti rotte."""
+    for domain, issue_id in list(ir.async_get(hass).issues):
+        if domain == DOMAIN:
+            ir.async_delete_issue(hass, DOMAIN, issue_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ForumConfigEntry) -> bool:
