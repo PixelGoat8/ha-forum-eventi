@@ -1,3 +1,5 @@
+<img src="custom_components/forum_eventi/brand/icon@2x.png" alt="" width="128" align="right">
+
 # Eventi Forum & Repower
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
