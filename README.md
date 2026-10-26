@@ -74,8 +74,9 @@ Copia `custom_components/forum_eventi` in `/config/custom_components/`, riavvia,
 
 ## Pubblicare una nuova versione
 1. Aggiorna `version` in `custom_components/forum_eventi/manifest.json` (es. `0.2.1`).
-2. Commit, poi tag con la stessa versione: `git tag v0.2.1 && git push --tags`.
-3. L'action **Release** controlla che tag e manifest coincidano e pubblica la release; HACS la propone come aggiornamento.
+2. Commit e push su `main`.
+3. Crea la release: da riga di comando `git tag v0.2.1 && git push --tags`, oppure da GitHub › **Releases › Draft a new release** con tag `v0.2.1` (lo crea lei).
+4. L'action **Release** controlla che tag e manifest coincidano (e crea la release se hai usato solo il tag); HACS la propone come aggiornamento.
 
 ## Diagnosi fuori da HA
 

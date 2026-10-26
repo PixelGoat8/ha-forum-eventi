@@ -1,6 +1,7 @@
 name: Release
 
 # Su ogni tag vX.Y.Z: controlla che coincida con manifest.json e pubblica la release.
+# Se la release l'hai già creata dall'interfaccia di GitHub (che crea anche il tag), fa solo il controllo.
 # HACS mostra l'aggiornamento in Home Assistant quando esce una nuova release.
 on:
   push:
@@ -21,4 +22,9 @@ jobs:
       - name: Pubblica release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --generate-notes --title "$GITHUB_REF_NAME"
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME già presente"
+          else
+            gh release create "$GITHUB_REF_NAME" --generate-notes --title "$GITHUB_REF_NAME"
+          fi
