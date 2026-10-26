@@ -141,9 +141,83 @@ Nella cartella [`ha_config`](ha_config) trovi due esempi pronti da adattare.
 - **[Notifica mattutina](ha_config/automazione_forum.yaml)**: alle 7:30, se oggi c'è un evento, manda una notifica con gli eventi, gli orari e il livello di domani. Sostituisci `notify.notify` con il tuo servizio. Funziona su iOS (i livelli alto ed estremo superano le modalità Full Immersion) e su Android (priorità alta e canale dedicato).
 - **[Card per la dashboard](ha_config/card_panoramica.yaml)**: un avviso colorato secondo il livello, visibile solo nei giorni con eventi, più una card facoltativa con la settimana.
 
-Avviso quando comincia l'afflusso:
+### Automazioni
+
+Gli esempi usano `notify.notify`: sostituiscilo con il tuo servizio di notifica (vedi [sotto](#notifiche-su-più-dispositivi) per mandarle a più dispositivi). Si incollano in **Impostazioni › Automazioni › Crea automazione › Modifica in YAML**.
+
+#### Mattina: casino oggi
 
 ```yaml
+alias: "Forum: casino oggi"
+triggers:
+  - trigger: time
+    at: "07:30:00"
+conditions:
+  - condition: state
+    entity_id: sensor.forum_casino_oggi
+    state: ["alto", "estremo"]
+actions:
+  - action: notify.notify
+    data:
+      title: "Forum: oggi casino {{ states('sensor.forum_casino_oggi') }}"
+      message: "{{ state_attr('sensor.forum_casino_oggi', 'riepilogo') }}"
+```
+
+#### Sera prima: domani c'è un evento
+
+Alle 20:00, se domani il livello è almeno medio, con l'ora in cui comincia l'afflusso.
+
+```yaml
+alias: "Forum: avviso per domani"
+triggers:
+  - trigger: time
+    at: "20:00:00"
+conditions:
+  - condition: state
+    entity_id: sensor.forum_casino_domani
+    state: ["medio", "alto", "estremo"]
+actions:
+  - action: notify.notify
+    data:
+      title: "Forum: domani casino {{ states('sensor.forum_casino_domani') }}"
+      message: >-
+        {% set afflussi = state_attr('sensor.forum_casino_domani', 'finestre')
+           | selectattr('tipo', 'eq', 'afflusso') | list %}
+        {{ state_attr('sensor.forum_casino_domani', 'riepilogo') }}
+        {%- if afflussi %}. Afflusso dalle {{ as_timestamp(afflussi[0].inizio) | timestamp_custom('%H:%M') }}
+        {%- if afflussi[0].orario_stimato %} (orario stimato){% endif %}{% endif %}
+```
+
+#### Lunedì: la settimana
+
+Il lunedì alle 8:00, dopo la raccolta settimanale (di default alle 4:17), un riepilogo dei giorni con eventi.
+
+```yaml
+alias: "Forum: riepilogo settimanale"
+triggers:
+  - trigger: time
+    at: "08:00:00"
+conditions:
+  - condition: time
+    weekday: mon
+  - condition: numeric_state
+    entity_id: sensor.forum_prossimi_7_giorni
+    above: 0
+actions:
+  - action: notify.notify
+    data:
+      title: "Forum: {{ states('sensor.forum_prossimi_7_giorni') }} giorni con eventi questa settimana"
+      message: |-
+        {%- set nomi = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'] %}
+        {%- for g in state_attr('sensor.forum_prossimi_7_giorni', 'giorni') %}
+        {{ nomi[as_datetime(g.giorno).weekday()] }} {{ as_datetime(g.giorno).strftime('%d/%m') }}: {{ g.livello }} · {{ g.riepilogo }}
+        {%- endfor %}
+```
+
+#### Quando comincia l'afflusso
+
+```yaml
+alias: "Forum: afflusso in corso"
 triggers:
   - trigger: state
     entity_id: binary_sensor.forum_afflusso_in_corso
@@ -158,21 +232,35 @@ actions:
         traffico fino alle {{ as_timestamp(f.fine) | timestamp_custom('%H:%M') }}
 ```
 
-Un'automazione minima:
+#### Esci di casa durante una fascia
+
+Sostituisci `person.tu` con la tua persona.
 
 ```yaml
+alias: "Forum: esci durante afflusso o deflusso"
 triggers:
-  - trigger: time
-    at: "07:30:00"
+  - trigger: state
+    entity_id: person.tu
+    from: home
 conditions:
-  - condition: state
-    entity_id: sensor.forum_casino_oggi
-    state: ["alto", "estremo"]
+  - condition: or
+    conditions:
+      - condition: state
+        entity_id: binary_sensor.forum_afflusso_in_corso
+        state: "on"
+      - condition: state
+        entity_id: binary_sensor.forum_deflusso_in_corso
+        state: "on"
 actions:
   - action: notify.notify
     data:
-      title: "Forum: oggi casino {{ states('sensor.forum_casino_oggi') }}"
-      message: "{{ state_attr('sensor.forum_casino_oggi', 'riepilogo') }}"
+      title: "Forum: traffico in zona"
+      message: >-
+        {% set s = 'binary_sensor.forum_afflusso_in_corso' if is_state('binary_sensor.forum_afflusso_in_corso', 'on')
+           else 'binary_sensor.forum_deflusso_in_corso' %}
+        {% set f = state_attr(s, 'attive')[0] %}
+        {{ f.tipo | capitalize }} per {{ f.evento }} ({{ f.venue }}) fino alle
+        {{ as_timestamp(f.fine) | timestamp_custom('%H:%M') }}
 ```
 
 ### Notifiche su più dispositivi
