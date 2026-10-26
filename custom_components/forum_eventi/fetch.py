@@ -67,6 +67,45 @@ async def fetch_forumnet(session: aiohttp.ClientSession, venue: str) -> list[Eve
     return events
 
 
+async def fetch_event_pages(session: aiohttp.ClientSession, events: list[Event], cache: dict[str, dict],
+                            today: date, tried: set[str] | None = None) -> int:
+    """Legge le pagine evento ufficiali non ancora in cache (orari in testo libero), le più vicine per prime.
+    Una pagina letta non si riscarica più: la cache (url -> {"letto", "programma"}) va conservata dal chiamante.
+    `tried` raccoglie le pagine già tentate, per non ripeterle nello stesso giro. Restituisce quante pagine sono state lette."""
+    tried = set() if tried is None else tried
+    urls: list[str] = []
+    for ev in sorted(events, key=lambda e: e.start):
+        if (ev.start.date() >= today and forumnet.is_event_page(ev.url) and ev.url not in cache
+                and ev.url not in tried and ev.url not in urls and "euroleague" not in ev.sources):
+            urls.append(ev.url)
+    read = errors = 0
+    for i, url in enumerate(urls):
+        if i:
+            await asyncio.sleep(PAGE_DELAY)
+        tried.add(url)
+        try:
+            schedule = forumnet.parse_event_page(await _get_text(session, url))
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.warning("Pagina evento %s non disponibile: %s", url, err)
+            errors += 1
+            if errors >= 3:
+                _LOGGER.warning("Troppi errori sulle pagine evento: riprovo alla prossima raccolta")
+                break
+            continue
+        errors = 0
+        read += 1
+        if schedule is not None:            # "Evento passato": non in cache, si riprova la volta dopo
+            cache[url] = {"letto": today.isoformat(), "programma": schedule}
+    _LOGGER.info("Pagine evento: %d lette, %d da leggere, %d in cache", read, len(urls) - read, len(cache))
+    return read
+
+
+def prune_page_cache(cache: dict[str, dict], events: list[Event]) -> dict[str, dict]:
+    """Tiene in cache solo le pagine degli eventi ancora in calendario."""
+    keep = {e.url for e in events}
+    return {url: v for url, v in cache.items() if url in keep}
+
+
 async def fetch_rockol(session: aiohttp.ClientSession, venue: str) -> list[Event]:
     first = await _get_text(session, rockol.page_url(venue, 1))
     events = rockol.parse_listing(first)

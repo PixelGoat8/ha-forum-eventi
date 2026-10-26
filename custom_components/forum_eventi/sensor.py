@@ -50,7 +50,10 @@ class LevelSensor(ForumEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict:
-        return self._a().as_attributes()
+        a = self._a()
+        attrs = a.as_attributes()
+        attrs["finestre"] = [w.as_dict() for w in self.coordinator.windows(a.day, a.day)]
+        return attrs
 
 
 class ScoreSensor(ForumEntity, SensorEntity):

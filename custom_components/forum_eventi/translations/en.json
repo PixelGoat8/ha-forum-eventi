@@ -17,19 +17,29 @@
         "title": "Fonti e punteggio",
         "data": {
           "use_official": "Siti ufficiali di Unipol Forum e Teatro Repower",
+          "use_event_pages": "Orari dalle pagine evento dei siti ufficiali",
           "use_rockol": "Rockol (concerti al Forum)",
           "use_euroleague": "EuroLeague (partite Olimpia al Forum)",
           "use_ticketone": "TicketOne (spesso bloccato dalla protezione anti-bot)",
           "big_artists": "Eventi 'big' (separati da virgola)",
           "extra_urls": "Pagine extra con eventi JSON-LD (una per riga)",
           "refresh_weekday": "Giorno dell'aggiornamento settimanale",
-          "refresh_hour": "Ora dell'aggiornamento"
+          "refresh_hour": "Ora dell'aggiornamento",
+          "inflow_before": "Afflusso: minuti prima dell'inizio",
+          "outflow_from": "Deflusso: da quanti minuti dopo l'inizio",
+          "outflow_to": "Deflusso: fino a quanti minuti dopo l'inizio"
         },
         "data_description": {
+          "use_event_pages": "Legge una volta sola la pagina di ogni evento (sul Teatro Repower c'è quasi sempre l'orario). La prima volta sono circa 100 pagine, lette in background con 2 secondi di pausa.",
+          "inflow_before": "La fascia di afflusso va da questi minuti prima dell'inizio fino all'inizio. Senza orario si usa quello tipico: 21:00 al Forum, 20:30 al Repower.",
+          "outflow_to": "Deve essere maggiore dell'inizio del deflusso.",
           "extra_urls": "Pagine con eventi schema.org JSON-LD (es. il calendario Songkick del Forum). Vengono tenuti solo gli eventi con location Forum o Repower.",
           "big_artists": "Nome = +15 al punteggio. Nome=livello (basso, medio, alto, estremo) = la giornata non scende sotto quel livello. Una voce vale se tutte le sue parole sono nel titolo; se ne valgono più di una vince la più severa. Es.: Laura Pausini, X Factor=alto, X Factor Finale=estremo"
         }
       }
+    },
+    "error": {
+      "outflow_order": "La fine del deflusso deve venire dopo il suo inizio."
     }
   },
   "entity": {
@@ -70,6 +80,12 @@
     "binary_sensor": {
       "evento_oggi": {
         "name": "Evento oggi"
+      },
+      "afflusso_in_corso": {
+        "name": "Afflusso in corso"
+      },
+      "deflusso_in_corso": {
+        "name": "Deflusso in corso"
       }
     },
     "calendar": {

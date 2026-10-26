@@ -14,6 +14,7 @@ Utile se abiti o lavori vicino a Milanofiori: una sera con un concerto sold out 
 
 - Raccoglie gli eventi una volta a settimana da più fonti e unisce i doppioni.
 - Ogni giorno assegna un livello: **nessuno**, **basso**, **medio**, **alto**, **estremo**.
+- Calcola le fasce di **afflusso** e **deflusso** intorno a ogni spettacolo e le espone come sensori binari che si accendono e spengono da soli.
 - Espone sensori, un calendario e un sensore binario "evento oggi" da usare in automazioni e dashboard.
 - Non usa account, chiavi API o servizi cloud propri.
 
@@ -39,7 +40,7 @@ Gli aggiornamenti successivi compaiono in Home Assistant come quelli delle altre
 2. Copia la cartella `custom_components/forum_eventi` in `/config/custom_components/`.
 3. Riavvia Home Assistant e aggiungi l'integrazione come al punto 4 sopra.
 
-Alla prima configurazione l'integrazione scarica subito il calendario: ci vuole circa mezzo minuto, perché tra una pagina e l'altra rispetta le pause richieste dai siti.
+Alla prima configurazione l'integrazione scarica subito il calendario: ci vuole circa mezzo minuto, perché tra una pagina e l'altra rispetta le pause richieste dai siti. Poi, in background, legge una volta sola la pagina di ogni evento dei siti ufficiali per ricavarne gli orari: la prima volta sono circa 100 pagine e servono 3-4 minuti, nelle settimane successive solo gli eventi nuovi.
 
 ## Configurazione
 
@@ -48,12 +49,15 @@ Tutte le impostazioni sono in **Impostazioni › Dispositivi e servizi › Event
 | Opzione | Default | Descrizione |
 |---|---|---|
 | Siti ufficiali | attiva | Calendario completo di Unipol Forum e Teatro Repower: concerti, sport, spettacoli |
+| Orari dalle pagine evento | attiva | Legge una volta la pagina di ogni evento ufficiale per ricavare gli orari (vedi [Fonti dei dati](#fonti-dei-dati)) |
 | Rockol | attiva | Concerti all'Unipol Forum, come riserva |
 | EuroLeague | attiva | Partite casalinghe dell'Olimpia Milano al Forum |
 | TicketOne | spenta | Vedi [Limiti](#limiti) |
 | Eventi "big" | vuoto | Nomi separati da virgola. Un nome da solo aggiunge +15 al punteggio; `nome=livello` impone un livello minimo alla giornata (`basso`, `medio`, `alto`, `estremo`). Una voce vale se tutte le sue parole compaiono nel titolo; se ne valgono più di una vince la più severa. Es.: `Laura Pausini, X Factor=alto, X Factor Finale=estremo` |
 | Pagine extra | calendario Songkick del Forum | Una URL per riga. Sono valide le pagine che pubblicano eventi in formato [schema.org](https://schema.org/Event) (JSON-LD); vengono tenuti solo gli eventi al Forum o al Repower |
 | Giorno e ora dell'aggiornamento | lunedì, 04:00 | Quando scaricare il calendario della settimana |
+| Afflusso: minuti prima dell'inizio | 120 | La fascia di afflusso va da questi minuti prima dell'inizio fino all'inizio |
+| Deflusso: da / fino a quanti minuti dopo l'inizio | 150 / 180 | La fascia di deflusso; la fine deve venire dopo l'inizio |
 
 ## Entità
 
@@ -65,11 +69,35 @@ Tutte le impostazioni sono in **Impostazioni › Dispositivi e servizi › Event
 | `sensor.forum_prossimo_evento` | titolo del prossimo evento | `venue`, `inizio`, `tra_giorni`, `livello_giornata` |
 | `sensor.forum_prossimi_7_giorni` | giorni con eventi nella settimana | `giorni`: elenco con livello e riepilogo di ogni giorno |
 | `binary_sensor.forum_evento_oggi` | `on` se oggi c'è almeno un evento | |
+| `binary_sensor.forum_afflusso_in_corso` | `on` durante una fascia di afflusso | `attive`, `prossima`, `oggi` |
+| `binary_sensor.forum_deflusso_in_corso` | `on` durante una fascia di deflusso | `attive`, `prossima`, `oggi` |
 | `calendar.forum_eventi` | | tutti gli eventi, con il livello del giorno nel titolo |
 | `button.forum_aggiorna_eventi` | | scarica subito il calendario |
 | `sensor.forum_ultimo_aggiornamento` | data dell'ultima raccolta | `eventi_per_fonte`, `errori`, `fonti_vuote` |
 
 Servizio: **`forum_eventi.aggiorna`**, equivalente al pulsante.
+
+`sensor.forum_casino_oggi` e `sensor.forum_casino_domani` hanno anche l'attributo `finestre`, con tutte le fasce della giornata.
+
+### Fasce di afflusso e deflusso
+
+Per ogni spettacolo l'integrazione calcola due fasce: l'**afflusso**, da 2 ore prima dell'inizio fino all'inizio, e il **deflusso**, da 2 ore e mezza a 3 ore dopo l'inizio. Puoi cambiare questi valori nelle opzioni. Con più repliche nello stesso giorno ogni replica ha le sue fasce. Il deflusso di un evento serale può finire dopo mezzanotte: il sensore resta acceso fino alla fine della fascia.
+
+Ogni fascia negli attributi ha questa forma:
+
+```yaml
+tipo: afflusso
+inizio: "2026-11-06T18:30:00+01:00"
+fine: "2026-11-06T20:30:00+01:00"
+evento: Placebo
+venue: Unipol Forum
+orario: "20:30"
+orario_stimato: false
+```
+
+Se nessuna fonte conosce l'orario, l'integrazione usa quello tipico (21:00 al Forum, 20:30 al Repower) e lo segnala con `orario_stimato: true`.
+
+I sensori si accendono e si spengono esattamente all'inizio e alla fine delle fasce, senza interrogazioni periodiche.
 
 I dati vengono salvati su disco: un riavvio di Home Assistant non riscarica nulla, e a mezzanotte i sensori passano al giorno nuovo senza fare richieste.
 
@@ -88,7 +116,7 @@ Ogni evento del giorno contribuisce con una base, a cui si sommano dei bonus. Il
 | Evento nella lista "big" | +15, oppure il livello minimo indicato (`nome=alto` porta la giornata almeno a 55) |
 | Più repliche nello stesso giorno | +5 per ogni replica in più |
 | Forum e Repower nello stesso giorno | +10 |
-| Giorno feriale con inizio entro le 21:00 (o orario non noto al Forum) | +10 |
+| Giorno feriale con inizio serale, dalle 17:00 alle 21:00 (o orario non noto al Forum) | +10 |
 | Venerdì o sabato | +5 |
 
 | Livello | Punteggio |
@@ -112,6 +140,23 @@ Nella cartella [`ha_config`](ha_config) trovi due esempi pronti da adattare.
 
 - **[Notifica mattutina](ha_config/automazione_forum.yaml)**: alle 7:30, se oggi c'è un evento, manda una notifica con gli eventi, gli orari e il livello di domani. Sostituisci `notify.notify` con il tuo servizio. Funziona su iOS (i livelli alto ed estremo superano le modalità Full Immersion) e su Android (priorità alta e canale dedicato).
 - **[Card per la dashboard](ha_config/card_panoramica.yaml)**: un avviso colorato secondo il livello, visibile solo nei giorni con eventi, più una card facoltativa con la settimana.
+
+Avviso quando comincia l'afflusso:
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.forum_afflusso_in_corso
+    to: "on"
+actions:
+  - action: notify.notify
+    data:
+      title: "Forum: afflusso in corso"
+      message: >-
+        {% set f = state_attr('binary_sensor.forum_afflusso_in_corso', 'attive')[0] %}
+        {{ f.evento }} alle {{ f.orario }}{{ ' (orario stimato)' if f.orario_stimato }}:
+        traffico fino alle {{ as_timestamp(f.fine) | timestamp_custom('%H:%M') }}
+```
 
 Un'automazione minima:
 
@@ -149,18 +194,18 @@ Il gruppo inoltra anche i parametri `data` (link, priorità, livello iOS). Serve
 
 | Fonte | Cosa fornisce |
 |---|---|
-| [unipolforum.it](https://www.unipolforum.it/) e [teatrorepower.com](https://www.teatrorepower.com/) | Il calendario ufficiale: tutti gli eventi, comprese le partite di Serie A ed EuroLeague dell'Olimpia, la pallavolo e ogni replica a teatro. Senza orario |
+| [unipolforum.it](https://www.unipolforum.it/) e [teatrorepower.com](https://www.teatrorepower.com/) | Il calendario ufficiale: tutti gli eventi, comprese le partite di Serie A ed EuroLeague dell'Olimpia, la pallavolo e ogni replica a teatro. L'elenco non ha orari: li ricava dalla pagina di ogni evento, dove ci sono quasi sempre per il Repower e di rado per il Forum |
 | [Rockol](https://www.rockol.it/) | Concerti all'Unipol Forum, senza orario |
 | [Songkick](https://www.songkick.com/venues/4565288-unipol-forum) | Concerti all'Unipol Forum, quasi sempre con orario |
 | [EuroLeague](https://www.euroleaguebasketball.net/) | Partite casalinghe dell'Olimpia Milano, con orario |
 
-I siti ufficiali sono la fonte principale; le altre aggiungono gli orari e fanno da riserva se un sito non risponde. Quando più fonti riportano lo stesso evento, l'integrazione lo conta una volta sola, usa il titolo del sito ufficiale e l'orario della fonte più affidabile che lo conosce.
+I siti ufficiali sono la fonte principale; le altre aggiungono gli orari e fanno da riserva se un sito non risponde. Quando più fonti riportano lo stesso evento, l'integrazione lo conta una volta sola e usa il titolo del sito ufficiale. Per l'orario l'ordine è: EuroLeague, poi la pagina evento ufficiale, poi Songkick.
 
 Le richieste sono poche e distanziate: una raccolta a settimana, con le pause tra le pagine indicate nel `robots.txt` di ciascun sito, e solo su pagine che il `robots.txt` consente.
 
 ## Limiti
 
-- **Orari**: i siti ufficiali non li riportano nell'elenco. Per i concerti al Forum e le partite di EuroLeague arrivano da Songkick ed EuroLeague; per gli spettacoli al Repower e le partite di Serie A spesso mancano.
+- **Orari**: per gli spettacoli al Repower arrivano dalle pagine evento ufficiali, per i concerti al Forum da Songkick, per l'EuroLeague dalla sua API. Le pagine del Forum di solito riportano solo la data, quindi le partite di Serie A e alcuni spettacoli restano senza orario: in quel caso le fasce usano l'orario tipico.
 - **Sold out**: le fonti attive di solito non lo indicano, quindi quel bonus scatta raramente.
 - **TicketOne**: blocca le richieste che non arrivano da un browser. L'opzione esiste ma è spenta, e di solito fallisce dopo 30 secondi.
 - I dati dipendono da siti di terze parti e possono essere incompleti o cambiare senza preavviso. Usa l'indice come indicazione, non come certezza.

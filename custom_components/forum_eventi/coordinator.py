@@ -13,13 +13,15 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    CONF_BIG_ARTISTS, CONF_EXTRA_URLS, CONF_REFRESH_HOUR, CONF_REFRESH_WEEKDAY,
-    CONF_USE_EUROLEAGUE, CONF_USE_OFFICIAL, CONF_USE_ROCKOL, CONF_USE_TICKETONE, DEFAULTS, DOMAIN, STALE_AFTER_DAYS,
-    STORAGE_VERSION,
+    CONF_BIG_ARTISTS, CONF_EXTRA_URLS, CONF_INFLOW_BEFORE, CONF_OUTFLOW_FROM, CONF_OUTFLOW_TO, CONF_REFRESH_HOUR,
+    CONF_REFRESH_WEEKDAY, CONF_USE_EUROLEAGUE, CONF_USE_EVENT_PAGES, CONF_USE_OFFICIAL, CONF_USE_ROCKOL,
+    CONF_USE_TICKETONE, DEFAULTS, DOMAIN, STALE_AFTER_DAYS, STORAGE_VERSION,
 )
-from .fetch import fetch_all
+from .fetch import fetch_all, fetch_event_pages, prune_page_cache
 from .models import Event
 from .scoring import DayAssessment, assess_day
+from .sources.forumnet import apply_page_times
+from .windows import Window, build_windows
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,6 +44,8 @@ class ForumCoordinator(DataUpdateCoordinator[ForumData]):
         super().__init__(hass, _LOGGER, config_entry=entry, name=DOMAIN, update_interval=None)
         self._store: Store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
         self._unsubs: list = []
+        self._page_cache: dict[str, dict] = {}     # url pagina evento -> {"letto", "programma"}
+        self._pages_task = None
 
     # ------------------------------------------------------------- opzioni
     def opt(self, key: str):
@@ -61,12 +65,14 @@ class ForumCoordinator(DataUpdateCoordinator[ForumData]):
         cached = await self._store.async_load()
         if cached:
             fetched_at = dt_util.parse_datetime(cached.get("fetched_at") or "")
+            self._page_cache = cached.get("pagine_evento", {})
             self.async_set_updated_data(ForumData(
                 [Event.from_dict(e) for e in cached.get("events", [])],
                 fetched_at, cached.get("per_source", {}), cached.get("errors", {}),
             ))
             if fetched_at and dt_util.utcnow() - fetched_at < timedelta(days=STALE_AFTER_DAYS):
                 self._schedule()
+                self._start_event_pages()          # riprende una lettura interrotta da un riavvio
                 return
             await self.async_refresh()          # cache vecchia: se fallisce restano i dati in cache
         else:
@@ -113,15 +119,46 @@ class ForumCoordinator(DataUpdateCoordinator[ForumData]):
                 return self.data
             raise UpdateFailed(f"Nessuna fonte raggiungibile: {report.errors}")
 
+        self._page_cache = prune_page_cache(self._page_cache, report.events)
+        apply_page_times(report.events, self._page_cache)
         data = ForumData(report.events, dt_util.utcnow(), report.per_source, report.errors)
+        await self._async_save(data)
+        _LOGGER.info("Eventi aggiornati: %s (errori: %s)", report.per_source, report.errors or "nessuno")
+        # Le pagine evento nuove (orari) si leggono dopo, in background: i sensori non aspettano
+        self.hass.loop.call_soon(self._start_event_pages)
+        return data
+
+    async def _async_save(self, data: ForumData) -> None:
         await self._store.async_save({
-            "fetched_at": data.fetched_at.isoformat(),
+            "fetched_at": data.fetched_at.isoformat() if data.fetched_at else None,
             "events": [e.to_dict() for e in data.events],
             "per_source": data.per_source,
             "errors": data.errors,
+            "pagine_evento": self._page_cache,
         })
-        _LOGGER.info("Eventi aggiornati: %s (errori: %s)", report.per_source, report.errors or "nessuno")
-        return data
+
+    # ------------------------------------------------------- pagine evento (orari)
+    @callback
+    def _start_event_pages(self) -> None:
+        if not self.opt(CONF_USE_EVENT_PAGES) or not self.opt(CONF_USE_OFFICIAL) or not self.data:
+            return
+        if self._pages_task and not self._pages_task.done():
+            return
+        self._pages_task = self.config_entry.async_create_background_task(
+            self.hass, self._async_read_event_pages(), f"{DOMAIN}_pagine_evento")
+
+    async def _async_read_event_pages(self) -> None:
+        # Ripete finché ci sono pagine nuove: una raccolta arrivata nel frattempo può aggiungerne
+        tried: set[str] = set()
+        while self.data:
+            read = await fetch_event_pages(async_get_clientsession(self.hass), self.data.events,
+                                           self._page_cache, self.today(), tried)
+            if not read:
+                return
+            apply_page_times(self.data.events, self._page_cache)
+            self.data.events.sort(key=lambda e: (e.start, e.venue, e.title))
+            await self._async_save(self.data)
+            self.async_update_listeners()
 
     # ------------------------------------------------------------- calcoli
     def assess(self, day: date) -> DayAssessment:
@@ -130,6 +167,15 @@ class ForumCoordinator(DataUpdateCoordinator[ForumData]):
 
     def today(self) -> date:
         return dt_util.now().date()
+
+    def windows(self, first_day: date, last_day: date) -> list[Window]:
+        events = self.data.events if self.data else []
+        return build_windows(
+            events, first_day, last_day,
+            inflow_before=int(self.opt(CONF_INFLOW_BEFORE)),
+            outflow_from=int(self.opt(CONF_OUTFLOW_FROM)),
+            outflow_to=int(self.opt(CONF_OUTFLOW_TO)),
+        )
 
     def upcoming(self, days: int) -> list[DayAssessment]:
         start = self.today()

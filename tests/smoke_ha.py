@@ -29,17 +29,22 @@ async def main() -> int:
     hass.config.skip_pip = True
     loader.async_setup(hass)
     hass.config_entries = config_entries.ConfigEntries(hass, {})
-    await hass.config_entries.async_initialize()
+    from homeassistant import bootstrap
     from homeassistant.auth import auth_manager_from_config
-    from homeassistant.helpers import (
-        area_registry, category_registry, device_registry, entity_registry,
-        floor_registry, issue_registry, label_registry, translation,
-    )
-    for reg in (label_registry, floor_registry, area_registry, category_registry,
-                device_registry, entity_registry, issue_registry):
-        await reg.async_load(hass)
+    if hasattr(bootstrap, "async_load_base_functionality"):
+        # HA recente: registri, traduzioni e config entries come all'avvio vero
+        await bootstrap.async_load_base_functionality(hass)
+    else:
+        from homeassistant.helpers import (
+            area_registry, category_registry, device_registry, entity_registry,
+            floor_registry, issue_registry, label_registry, translation,
+        )
+        await hass.config_entries.async_initialize()
+        for reg in (label_registry, floor_registry, area_registry, category_registry,
+                    device_registry, entity_registry, issue_registry):
+            await reg.async_load(hass)
+        await translation.async_load(hass) if hasattr(translation, "async_load") else None
     hass.auth = await auth_manager_from_config(hass, [], [])
-    await translation.async_load(hass) if hasattr(translation, "async_load") else None
     await async_setup_component(hass, "homeassistant", {})
     await hass.async_start()
 
@@ -79,6 +84,7 @@ async def main() -> int:
         expected = ["sensor.forum_casino_oggi", "sensor.forum_punteggio_oggi", "sensor.forum_casino_domani",
                     "sensor.forum_prossimo_evento", "sensor.forum_prossimi_7_giorni",
                     "sensor.forum_ultimo_aggiornamento", "binary_sensor.forum_evento_oggi",
+                    "binary_sensor.forum_afflusso_in_corso", "binary_sensor.forum_deflusso_in_corso",
                     "calendar.forum_eventi", "button.forum_aggiorna_eventi"]
         for eid in expected:
             if eid not in states:
@@ -87,9 +93,21 @@ async def main() -> int:
         print("motivi:", oggi.attributes.get("motivi"))
         if oggi.state not in ("alto", "estremo"):
             print("livello inatteso", oggi.state); errors += 1
+        # fasce: Pausini 21:00 e Grease 20:30 oggi -> due afflussi, anche negli attributi di casino_oggi
+        aff = hass.states.get("binary_sensor.forum_afflusso_in_corso")
+        print("afflusso:", aff.state, aff.attributes.get("oggi"), "prossima:", aff.attributes.get("prossima"))
+        if len(aff.attributes.get("oggi") or []) != 2 or len(oggi.attributes.get("finestre") or []) != 4:
+            print("fasce inattese"); errors += 1
+
+        # opzioni: deflusso che finisce prima di iniziare -> errore sul campo
+        entry = hass.config_entries.async_entries("forum_eventi")[0]
+        r = await hass.config_entries.options.async_init(entry.entry_id)
+        r = await hass.config_entries.options.async_configure(r["flow_id"], {"outflow_from": 180, "outflow_to": 150})
+        if r["type"] != "form" or r["errors"] != {"outflow_to": "outflow_order"}:
+            print("errore deflusso non segnalato:", r); errors += 1
+        hass.config_entries.options.async_abort(r["flow_id"])
 
         # opzioni: lista big + ricarica
-        entry = hass.config_entries.async_entries("forum_eventi")[0]
         r = await hass.config_entries.options.async_init(entry.entry_id)
         r = await hass.config_entries.options.async_configure(r["flow_id"], {
             "use_ticketone": True, "use_euroleague": True, "big_artists": "Laura Pausini",

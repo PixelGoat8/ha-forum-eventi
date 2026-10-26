@@ -11,7 +11,7 @@ Regole (tutte modificabili qui):
   ("X Factor=alto" + "X Factor Finale=estremo")
 - più spettacoli nella stessa giornata: +5 per replica
 - Forum e Repower insieme: +10
-- feriale con inizio entro le 21:00 (afflusso in pieno rientro dal lavoro): +10
+- feriale con inizio serale (dalle 17:00) entro le 21:00 (afflusso in pieno rientro dal lavoro): +10
 - venerdì/sabato sera: +5
 """
 from __future__ import annotations
@@ -178,12 +178,15 @@ def assess_day(day: date, all_events: list[Event], big_artists: list[str] | None
         score += 10
         reasons.append("Forum e Repower insieme (+10)")
 
-    first_start = min((e.start for e in todays if e.start.hour), default=None)
+    # Rientro dal lavoro: conta il primo spettacolo serale (dalle 17), non una matinée delle 12:00
+    starts = [e.start.replace(hour=int(t[:2]), minute=int(t[3:])) for e in todays for t in e.times]
+    has_times = bool(starts)
+    first_start = min((s for s in starts if s.hour >= 17), default=None)
     if day.weekday() < 5:
         if first_start and (first_start.hour, first_start.minute) <= (21, 0):
             score += 10
             reasons.append(f"feriale, inizio alle {first_start:%H:%M} in orario di rientro (+10)")
-        elif first_start is None and VENUE_FORUM in {e.venue for e in todays}:
+        elif not has_times and VENUE_FORUM in {e.venue for e in todays}:
             # Rockol non dà l'orario: al Forum le serate iniziano quasi sempre 20:30-21:00
             score += 10
             reasons.append("feriale, orario non noto (al Forum di solito 20:30-21:00) (+10)")
