@@ -10,7 +10,7 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_BIG_ARTISTS, CONF_EXTRA_URLS, CONF_REFRESH_HOUR, CONF_REFRESH_WEEKDAY,
-    CONF_USE_EUROLEAGUE, CONF_USE_ROCKOL, CONF_USE_TICKETONE, DEFAULTS, DOMAIN, NAME,
+    CONF_USE_EUROLEAGUE, CONF_USE_OFFICIAL, CONF_USE_ROCKOL, CONF_USE_TICKETONE, DEFAULTS, DOMAIN, NAME,
 )
 
 WEEKDAYS = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"]
@@ -41,9 +41,10 @@ class ForumOptionsFlow(OptionsFlow):
 
         o = {**DEFAULTS, **self.config_entry.options}
         schema = vol.Schema({
-            vol.Required(CONF_USE_TICKETONE, default=o[CONF_USE_TICKETONE]): bool,
+            vol.Required(CONF_USE_OFFICIAL, default=o[CONF_USE_OFFICIAL]): bool,
             vol.Required(CONF_USE_ROCKOL, default=o[CONF_USE_ROCKOL]): bool,
             vol.Required(CONF_USE_EUROLEAGUE, default=o[CONF_USE_EUROLEAGUE]): bool,
+            vol.Required(CONF_USE_TICKETONE, default=o[CONF_USE_TICKETONE]): bool,
             vol.Optional(CONF_BIG_ARTISTS, default=o[CONF_BIG_ARTISTS]): selector.TextSelector(),
             vol.Optional(CONF_EXTRA_URLS, default=o[CONF_EXTRA_URLS]): selector.TextSelector(
                 selector.TextSelectorConfig(multiline=True)

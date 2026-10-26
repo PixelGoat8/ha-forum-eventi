@@ -19,5 +19,5 @@ class ForumEntity(CoordinatorEntity[ForumCoordinator]):
             identifiers={(DOMAIN, coordinator.config_entry.entry_id)},
             name="Forum",   # entity_id: sensor.forum_casino_oggi, ecc.
             entry_type=DeviceEntryType.SERVICE,
-            manufacturer="Rockol · EuroLeague · Songkick/JSON-LD",
+            manufacturer="Siti ufficiali · Rockol · Songkick · EuroLeague",
         )

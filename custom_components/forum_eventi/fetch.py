@@ -11,7 +11,7 @@ from datetime import date
 import aiohttp
 
 from .models import VENUE_FORUM, VENUE_REPOWER, Event, merge_events
-from .sources import euroleague, jsonld, rockol, ticketone
+from .sources import euroleague, forumnet, jsonld, rockol, ticketone
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,6 +55,18 @@ async def fetch_ticketone(session: aiohttp.ClientSession, venue: str) -> list[Ev
     return events
 
 
+async def fetch_forumnet(session: aiohttp.ClientSession, venue: str) -> list[Event]:
+    """Calendario ufficiale (JSON) di Unipol Forum o Teatro Repower, tutte le pagine."""
+    first = forumnet.load(await _get_text(session, forumnet.page_url(venue, 1)))
+    events = forumnet.parse_payload(first, venue)
+    offs = forumnet.offsets(first)
+    _LOGGER.info("Sito ufficiale %s: %d pagine", venue, len(offs))
+    for off in offs[1:]:
+        await asyncio.sleep(PAGE_DELAY)
+        events += forumnet.parse_payload(forumnet.load(await _get_text(session, forumnet.page_url(venue, off))), venue)
+    return events
+
+
 async def fetch_rockol(session: aiohttp.ClientSession, venue: str) -> list[Event]:
     first = await _get_text(session, rockol.page_url(venue, 1))
     events = rockol.parse_listing(first)
@@ -75,6 +87,7 @@ async def fetch_all(
     today: date,
     *,
     use_ticketone: bool = False,
+    use_official: bool = True,
     use_rockol: bool = True,
     use_euroleague: bool = True,
     extra_urls: list[str] | None = None,
@@ -84,6 +97,9 @@ async def fetch_all(
     if use_ticketone:
         jobs["ticketone_forum"] = fetch_ticketone(session, VENUE_FORUM)
         jobs["ticketone_repower"] = fetch_ticketone(session, VENUE_REPOWER)
+    if use_official:
+        for venue in forumnet.SITES:
+            jobs[f"ufficiale_{venue}"] = fetch_forumnet(session, venue)
     if use_rockol:
         for venue in rockol.VENUE_URLS:
             jobs[f"rockol_{venue}"] = fetch_rockol(session, venue)

@@ -47,7 +47,8 @@ Tutte le impostazioni sono in **Impostazioni › Dispositivi e servizi › Event
 
 | Opzione | Default | Descrizione |
 |---|---|---|
-| Rockol | attiva | Concerti all'Unipol Forum (senza orario) |
+| Siti ufficiali | attiva | Calendario completo di Unipol Forum e Teatro Repower: concerti, sport, spettacoli |
+| Rockol | attiva | Concerti all'Unipol Forum, come riserva |
 | EuroLeague | attiva | Partite casalinghe dell'Olimpia Milano al Forum |
 | TicketOne | spenta | Vedi [Limiti](#limiti) |
 | Artisti "big" | vuoto | Nomi separati da virgola che aggiungono +15 al punteggio, es. `Laura Pausini, Vasco Rossi` |
@@ -133,21 +134,20 @@ actions:
 
 | Fonte | Cosa fornisce |
 |---|---|
+| [unipolforum.it](https://www.unipolforum.it/) e [teatrorepower.com](https://www.teatrorepower.com/) | Il calendario ufficiale: tutti gli eventi, comprese le partite di Serie A ed EuroLeague dell'Olimpia, la pallavolo e ogni replica a teatro. Senza orario |
 | [Rockol](https://www.rockol.it/) | Concerti all'Unipol Forum, senza orario |
 | [Songkick](https://www.songkick.com/venues/4565288-unipol-forum) | Concerti all'Unipol Forum, quasi sempre con orario |
-| [EuroLeague](https://www.euroleaguebasketball.net/) | Partite casalinghe dell'Olimpia Milano |
+| [EuroLeague](https://www.euroleaguebasketball.net/) | Partite casalinghe dell'Olimpia Milano, con orario |
 
-Quando due fonti riportano lo stesso evento, l'integrazione lo conta una volta sola e tiene l'orario se almeno una delle due lo conosce.
+I siti ufficiali sono la fonte principale; le altre aggiungono gli orari e fanno da riserva se un sito non risponde. Quando più fonti riportano lo stesso evento, l'integrazione lo conta una volta sola, usa il titolo del sito ufficiale e l'orario della fonte più affidabile che lo conosce.
 
 Le richieste sono poche e distanziate: una raccolta a settimana, con le pause tra le pagine indicate nel `robots.txt` di ciascun sito, e solo su pagine che il `robots.txt` consente.
 
 ## Limiti
 
-- **Teatro Repower**: al momento non c'è una fonte stabile, quindi gli spettacoli al teatro sono coperti poco o per niente. Se trovi una pagina che li pubblica in formato schema.org puoi aggiungerla tra le pagine extra.
-- **Serie A di basket**: le partite di campionato dell'Olimpia non sono incluse, solo quelle di EuroLeague.
-- **Sold out**: le fonti attive di solito non indicano i sold out, quindi quel bonus scatta raramente.
-- **TicketOne**: è la fonte più completa, ma blocca le richieste che non arrivano da un browser. L'opzione esiste ma è spenta, e di solito fallisce dopo 30 secondi.
-- **Siti ufficiali** di Forum e Repower: non sono ancora usati come fonte (in valutazione).
+- **Orari**: i siti ufficiali non li riportano nell'elenco. Per i concerti al Forum e le partite di EuroLeague arrivano da Songkick ed EuroLeague; per gli spettacoli al Repower e le partite di Serie A spesso mancano.
+- **Sold out**: le fonti attive di solito non lo indicano, quindi quel bonus scatta raramente.
+- **TicketOne**: blocca le richieste che non arrivano da un browser. L'opzione esiste ma è spenta, e di solito fallisce dopo 30 secondi.
 - I dati dipendono da siti di terze parti e possono essere incompleti o cambiare senza preavviso. Usa l'indice come indicazione, non come certezza.
 
 ## Risoluzione dei problemi

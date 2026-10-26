@@ -4,7 +4,7 @@
 
 ```
 custom_components/forum_eventi/
-├── sources/          parser delle singole fonti (rockol, euroleague, jsonld, ticketone)
+├── sources/          parser delle singole fonti (forumnet = siti ufficiali, rockol, euroleague, jsonld, ticketone)
 ├── fetch.py          raccolta da tutte le fonti, timeout e pause tra le pagine
 ├── models.py         modello Event, normalizzazione dei titoli, unione dei doppioni
 ├── scoring.py        regole dell'indice di casino
@@ -41,6 +41,11 @@ python3 -X utf8 tools/forum_probe.py --raw
 ```
 
 Il primo comando mostra eventi e punteggi dei prossimi giorni. `--raw` salva l'HTML grezzo di ogni fonte (`raw_*.html`) e conta cosa trova: è il punto di partenza quando un sito cambia struttura. Su Windows usa `py` al posto di `python3`.
+
+## Note sulle fonti
+
+- **Siti ufficiali** (`sources/forumnet.py`): il blocco Calendario delle pagine è caricato da `/index.php?action=It_GruppoForum&m=calendario&p=<id>&pagine=<offset>&cateve=Tutti&mese=Tutti`, che risponde in JSON (`msg` con l'HTML delle righe, `pagine` con la paginazione). `pagine` è un offset a blocchi di 10: 1, 11, 21…
+- **Unione dei doppioni** (`models.merge_events`): stessa venue e stesso giorno; titoli uguali o contenuti l'uno nell'altro, oppure due eventi sportivi da fonti diverse. Titolo e orari vengono dalla fonte con priorità più alta (`SOURCE_PRIORITY`).
 
 ## Aggiungere una fonte
 

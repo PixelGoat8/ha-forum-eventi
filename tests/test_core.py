@@ -150,3 +150,58 @@ def test_songkick_style_title_merges_with_rockol():
         ev("Pooh @ Unipol Forum", (2026, 10, 19), 21, src="songkick"),
     ])
     assert len(merged) == 1 and merged[0].times == ["21:00"] and merged[0].sources == ["rockol", "songkick"]
+
+
+# ---------------------------------------------------------------- siti ufficiali (Forumnet)
+def _forumnet(name, venue):
+    from custom_components.forum_eventi.sources import forumnet
+    payload = forumnet.load((FIXTURES / name).read_text(encoding="utf-8"))
+    return forumnet, payload, forumnet.parse_payload(payload, venue)
+
+
+def test_forumnet_forum_real_payload():
+    forumnet, payload, events = _forumnet("forumnet_forum_p1.json", VENUE_FORUM)
+    assert len(events) == 11
+    first = events[0]
+    assert (first.title, first.start.date().isoformat(), first.category) == ("Don Toliver", "2026-10-27", CAT_CONCERT)
+    assert first.url == "https://www.unipolforum.it/it/musica/eve/1466-don-toliver/"
+    basket = next(e for e in events if "Trentino" in e.title)
+    assert basket.category == CAT_SPORT and basket.start.date() == date(2026, 11, 8)
+    assert forumnet.offsets(payload) == [1, 11, 21, 31, 41, 51, 61, 71]
+    assert forumnet.page_url(VENUE_FORUM, 11).endswith("&pagine=11&cateve=Tutti&mese=Tutti")
+
+
+def test_forumnet_repower_real_payload():
+    _, payload, events = _forumnet("forumnet_repower_p1.json", VENUE_REPOWER)
+    xf = [e for e in events if e.title.startswith("X FACTOR")]
+    assert [e.start.day for e in xf] == [29, 5, 12, 19, 26]          # un giovedì per riga
+    assert all(e.category == CAT_THEATRE for e in events)
+    merged = merge_events(events)
+    jan4 = [e.title for e in merged if e.start.date() == date(2027, 1, 4)]
+    assert sorted(jan4) == ["ALLADIN ON ICE", "PRINCIPESSA ANASTASIA"]  # due spettacoli diversi, non uniti
+
+
+def test_forumnet_overlapping_pages_are_deduplicated():
+    _, _, events = _forumnet("forumnet_forum_p1.json", VENUE_FORUM)
+    assert len(merge_events(events + events)) == len(events)
+
+
+def test_official_and_euroleague_same_game_merge():
+    official = ev("Eurolega: Armani Olimpia Milano vs Valencia Basket", (2026, 11, 5), 0, cat=CAT_SPORT, src="ufficiale")
+    el = ev("Olimpia Milano – Valencia (EuroLeague)", (2026, 11, 5), 20, 30, cat=CAT_SPORT, src="euroleague")
+    merged = merge_events([el, official])
+    assert len(merged) == 1
+    m = merged[0]
+    assert m.title.startswith("Eurolega: Armani") and m.times == ["20:30"] and set(m.sources) == {"ufficiale", "euroleague"}
+
+
+def test_official_rockol_songkick_merge_and_times_not_summed():
+    merged = merge_events([
+        ev("Artie5ive", (2026, 11, 10), 0, src="ufficiale"),
+        ev("Artie 5ive", (2026, 11, 10), 0, src="rockol"),
+        ev("Artie 5ive", (2026, 11, 10), 21, 0, src="songkick.com"),
+        ev("Artie 5ive", (2026, 11, 10), 20, 45, src="ticketone"),
+    ])
+    assert len(merged) == 1
+    m = merged[0]
+    assert m.title == "Artie5ive" and m.times == ["21:00"]       # orario della fonte più affidabile, niente "repliche" finte

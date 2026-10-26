@@ -16,9 +16,10 @@
       "init": {
         "title": "Fonti e punteggio",
         "data": {
-          "use_ticketone": "TicketOne (spesso bloccato dalla protezione anti-bot)",
+          "use_official": "Siti ufficiali di Unipol Forum e Teatro Repower",
           "use_rockol": "Rockol (concerti al Forum)",
           "use_euroleague": "EuroLeague (partite Olimpia al Forum)",
+          "use_ticketone": "TicketOne (spesso bloccato dalla protezione anti-bot)",
           "big_artists": "Artisti 'big' (separati da virgola, +15 al punteggio)",
           "extra_urls": "Pagine extra con eventi JSON-LD (una per riga)",
           "refresh_weekday": "Giorno dell'aggiornamento settimanale",

@@ -29,7 +29,7 @@ from custom_components.forum_eventi.fetch import USER_AGENT, fetch_all  # noqa: 
 from custom_components.forum_eventi.models import VENUE_FORUM, VENUE_REPOWER  # noqa: E402
 from custom_components.forum_eventi.scoring import assess_day  # noqa: E402
 from custom_components.forum_eventi.const import DEFAULTS, CONF_EXTRA_URLS  # noqa: E402
-from custom_components.forum_eventi.sources import jsonld, rockol  # noqa: E402
+from custom_components.forum_eventi.sources import forumnet, jsonld, rockol  # noqa: E402
 
 
 async def main() -> None:
@@ -38,6 +38,7 @@ async def main() -> None:
     ap.add_argument("--big", default="")
     ap.add_argument("--url", action="append", default=[])
     ap.add_argument("--ticketone", action="store_true", help="prova anche TicketOne (di solito bloccato)")
+    ap.add_argument("--no-ufficiali", action="store_true", help="salta i siti ufficiali di Forum e Repower")
     ap.add_argument("--no-rockol", action="store_true")
     ap.add_argument("--no-default-urls", action="store_true", help="non usare Songkick come pagina extra")
     ap.add_argument("--no-euroleague", action="store_true")
@@ -51,7 +52,11 @@ async def main() -> None:
     async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
         default_urls = [] if args.no_default_urls else DEFAULTS[CONF_EXTRA_URLS].split()
         if args.raw:
-            targets = [("rockol_forum", rockol.page_url(VENUE_FORUM, 1))] + [
+            targets = [
+                ("ufficiale_forum", forumnet.page_url(VENUE_FORUM, 1)),
+                ("ufficiale_repower", forumnet.page_url(VENUE_REPOWER, 1)),
+                ("rockol_forum", rockol.page_url(VENUE_FORUM, 1)),
+            ] + [
                 (f"extra{i}", u) for i, u in enumerate(default_urls + args.url, 1)
             ]
             for name, url in targets:
@@ -71,6 +76,7 @@ async def main() -> None:
         report = await fetch_all(
             session, today,
             use_ticketone=args.ticketone,
+            use_official=not args.no_ufficiali,
             use_rockol=not args.no_rockol,
             use_euroleague=not args.no_euroleague,
             extra_urls=default_urls + args.url,

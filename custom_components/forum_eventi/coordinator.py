@@ -14,7 +14,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_BIG_ARTISTS, CONF_EXTRA_URLS, CONF_REFRESH_HOUR, CONF_REFRESH_WEEKDAY,
-    CONF_USE_EUROLEAGUE, CONF_USE_ROCKOL, CONF_USE_TICKETONE, DEFAULTS, DOMAIN, STALE_AFTER_DAYS,
+    CONF_USE_EUROLEAGUE, CONF_USE_OFFICIAL, CONF_USE_ROCKOL, CONF_USE_TICKETONE, DEFAULTS, DOMAIN, STALE_AFTER_DAYS,
     STORAGE_VERSION,
 )
 from .fetch import fetch_all
@@ -101,6 +101,7 @@ class ForumCoordinator(DataUpdateCoordinator[ForumData]):
         report = await fetch_all(
             async_get_clientsession(self.hass), today,
             use_ticketone=bool(self.opt(CONF_USE_TICKETONE)),
+            use_official=bool(self.opt(CONF_USE_OFFICIAL)),
             use_rockol=bool(self.opt(CONF_USE_ROCKOL)),
             use_euroleague=bool(self.opt(CONF_USE_EUROLEAGUE)),
             extra_urls=self.extra_urls,
