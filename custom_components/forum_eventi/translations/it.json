@@ -27,7 +27,7 @@
         },
         "data_description": {
           "extra_urls": "Pagine con eventi schema.org JSON-LD (es. il calendario Songkick del Forum). Vengono tenuti solo gli eventi con location Forum o Repower.",
-          "big_artists": "Nome = +15 al punteggio. Nome=livello (basso, medio, alto, estremo) = la giornata non scende sotto quel livello. Es.: Laura Pausini, X Factor=alto"
+          "big_artists": "Nome = +15 al punteggio. Nome=livello (basso, medio, alto, estremo) = la giornata non scende sotto quel livello. Una voce vale se tutte le sue parole sono nel titolo; se ne valgono più di una vince la più severa. Es.: Laura Pausini, X Factor=alto, X Factor Finale=estremo"
         }
       }
     }
