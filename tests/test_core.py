@@ -205,3 +205,29 @@ def test_official_rockol_songkick_merge_and_times_not_summed():
     assert len(merged) == 1
     m = merged[0]
     assert m.title == "Artie5ive" and m.times == ["21:00"]       # orario della fonte più affidabile, niente "repliche" finte
+
+
+def test_forum_bill_with_several_artists_is_one_event():
+    # Rockol: una pagina per artista della stessa serata; Songkick: un evento con più performer
+    merged = merge_events([
+        ev("Megadeth", (2027, 4, 6), 0, src="rockol"),
+        ev("Testament", (2027, 4, 6), 0, src="rockol"),
+        ev("Black Label Society", (2027, 4, 6), 0, src="rockol"),
+        ev("Megadeth", (2027, 4, 6), 20, 0, src="songkick.com"),
+    ])
+    assert [(m.title, m.times) for m in merged] == [("Megadeth", ["20:00"])]
+    a = assess_day(date(2027, 4, 6), merged)
+    assert a.score == 55                                             # non 100: un solo concerto
+
+
+def test_forum_official_rows_and_sport_stay_separate():
+    merged = merge_events([
+        ev("Spettacolo A", (2027, 1, 30), 0, src="ufficiale"),
+        ev("Spettacolo B", (2027, 1, 30), 0, src="ufficiale"),
+        ev("Basket Serie A: Olimpia Milano vs Varese", (2027, 1, 30), 0, cat=CAT_SPORT, src="ufficiale"),
+        ev("Concerto C", (2027, 1, 30), 0, src="rockol"),
+        ev("Teatro D", (2027, 1, 30), 0, venue=VENUE_REPOWER, cat=CAT_THEATRE, src="rockol"),
+        ev("Teatro E", (2027, 1, 30), 0, venue=VENUE_REPOWER, cat=CAT_THEATRE, src="rockol"),
+    ])
+    assert len(merged) == 5           # C finisce in A; il Repower non è toccato dalla regola
+    assert "rockol" in next(m for m in merged if m.title == "Spettacolo A").sources

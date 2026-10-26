@@ -89,6 +89,12 @@ def _squash(title: str) -> str:
 def _same_event(a: Event, b: Event) -> bool:
     """a e b sono già nella stessa venue e nello stesso giorno."""
     sa, sb = _squash(a.title), _squash(b.title)
+    # Una sola serata per volta al Forum: Rockol ha una pagina per artista (spalla, DJ di una
+    # serata a più nomi), quindi "Megadeth", "Testament" e "Black Label Society" sono lo stesso
+    # concerto. Il sito ufficiale ha una riga per serata: due sue righe restano distinte.
+    if (a.venue == VENUE_FORUM and CAT_SPORT not in (a.category, b.category)
+            and not ("ufficiale" in a.sources and "ufficiale" in b.sources)):
+        return True
     if set(a.sources) & set(b.sources):
         return sa == sb                      # stessa fonte: solo i doppioni esatti (pagine sovrapposte)
     if sa and sb and (sa in sb or sb in sa) and min(len(sa), len(sb)) >= 3:
